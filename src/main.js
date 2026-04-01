@@ -31,6 +31,9 @@ import DocsComponents from '@/components/DocsComponents'
 import DocsExample from '@/components/DocsExample'
 import DocsIcons from '@/components/DocsIcons'
 
+import { VueDatePicker } from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css'
+
 // Create Vue application instance
 const app = createApp(App)
 
@@ -45,6 +48,7 @@ app.provide('icons', icons)
 // Register global components
 app.component('CIcon', CIcon)
 app.component('DocsComponents', DocsComponents)
+app.component('VueDatePicker', VueDatePicker)
 app.component('DocsExample', DocsExample)
 app.component('DocsIcons', DocsIcons)
 
