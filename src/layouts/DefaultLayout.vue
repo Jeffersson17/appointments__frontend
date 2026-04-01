@@ -15,7 +15,6 @@ import AppSidebar from '@/components/AppSidebar.vue'
           <router-view />
         </CContainer>
       </div>
-      <AppFooter />
     </div>
   </div>
 </template>
