@@ -2,8 +2,6 @@
 const props = defineProps({
   href: String,
 })
-
-import ComponentsImg from '@/assets/images/components.webp'
 </script>
 
 <template>
@@ -12,7 +10,6 @@ import ComponentsImg from '@/assets/images/components.webp'
       <div class="col-xl-auto col-12 d-none d-xl-block p-0">
         <img
           class="img-fluid"
-          :src="ComponentsImg"
           width="160px"
           height="160px"
           alt="CoreUI PRO hexagon"
