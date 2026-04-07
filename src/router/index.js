@@ -72,7 +72,7 @@ const routes = [
       {
         path: '/enterpises',
         name: 'Enterpises',
-        component: () => import('@/views/widgets/Widgets.vue'),
+        component: () => import('@/views/enterprises/EnterprisePage.vue'),
       },
     ],
   },
