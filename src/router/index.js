@@ -67,7 +67,7 @@ const routes = [
       {
         path: '/clients',
         name: 'Clients',
-        component: () => import('@/views/charts/Charts.vue'),
+        component: () => import('@/views/clients/ClientPage.vue'),
       },
       {
         path: '/enterpises',
