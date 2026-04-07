@@ -1,7 +1,5 @@
 <script setup>
 import MainChart from './MainChart.vue'
-import WidgetsStatsA from './../widgets/WidgetsStatsTypeA.vue'
-import WidgetsStatsD from './../widgets/WidgetsStatsTypeD.vue'
 
 const progressGroupExample1 = [
   { title: 'Monday', value1: 34, value2: 78 },
