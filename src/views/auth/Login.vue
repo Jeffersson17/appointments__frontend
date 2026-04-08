@@ -29,10 +29,6 @@
                       Login
                     </CButton>
                   </CCol>
-
-                  <CCol :xs="6" class="text-end">
-                    <CButton color="link" class="px-0"> Esqueceu a senha? </CButton>
-                  </CCol>
                 </CRow>
               </CForm>
             </CCardBody>
