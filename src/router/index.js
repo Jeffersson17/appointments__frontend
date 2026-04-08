@@ -34,51 +34,10 @@ import DefaultLayout from '@/layouts/DefaultLayout'
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    component: DefaultLayout,
-    redirect: '/dashboard',
-    children: [
-      {
-        path: '/dashboard',
-        name: 'Dashboard',
-        // route level code-splitting
-        // this generates a separate chunk (about.[hash].js) for this route
-        // which is lazy-loaded when the route is visited.
-        component: () =>
-          import(
-            /* webpackChunkName: "dashboard" */ '@/views/dashboard/Dashboard.vue'
-          ),
-      },
-      {
-        path: '/theme',
-        name: 'Theme',
-        redirect: '/theme/typography',
-      },
-      {
-        path: '/appoinments',
-        name: 'Appoinments',
-        component: () => import('@/views/appointments/AppointmentPage.vue'),
-      },
-      {
-        path: '/services',
-        name: 'Services',
-        component: () => import('@/views/services/ServicePage.vue'),
-      },
-      {
-        path: '/clients',
-        name: 'Clients',
-        component: () => import('@/views/clients/ClientPage.vue'),
-      },
-      {
-        path: '/enterpises',
-        name: 'Enterpises',
-        component: () => import('@/views/enterprises/EnterprisePage.vue'),
-      },
-    ],
+    redirect: '/pages/login',
   },
   {
     path: '/pages',
-    redirect: '/pages/404',
     name: 'Pages',
     component: {
       render() {
@@ -87,26 +46,59 @@ const routes = [
     },
     children: [
       {
+        path: 'login',
+        name: 'Login',
+        component: () => import('@/views/auth/Login'),
+      },
+      {
         path: '404',
         name: 'Page404',
-        component: () => import('@/views/pages/Page404'),
+        component: () => import('@/views/auth/Page404'),
       },
       {
         path: '500',
         name: 'Page500',
-        component: () => import('@/views/pages/Page500'),
-      },
-      {
-        path: 'login',
-        name: 'Login',
-        component: () => import('@/views/pages/Login'),
-      },
-      {
-        path: 'register',
-        name: 'Register',
-        component: () => import('@/views/pages/Register'),
+        component: () => import('@/views/auth/Page500'),
       },
     ],
+  },
+  {
+    path: '/app',
+    name: 'App',
+    component: DefaultLayout,
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () =>
+          import(/* webpackChunkName: "dashboard" */ '@/views/dashboard/Dashboard.vue'),
+      },
+      {
+        path: 'appoinments',
+        name: 'Appoinments',
+        component: () => import('@/views/appointments/AppointmentPage.vue'),
+      },
+      {
+        path: 'services',
+        name: 'Services',
+        component: () => import('@/views/services/ServicePage.vue'),
+      },
+      {
+        path: 'clients',
+        name: 'Clients',
+        component: () => import('@/views/clients/ClientPage.vue'),
+      },
+      {
+        path: 'enterpises',
+        name: 'Enterpises',
+        component: () => import('@/views/enterprises/EnterprisePage.vue'),
+      },
+    ],
+  },
+  // Catch-all para 404
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/pages/404',
   },
 ]
 
@@ -117,6 +109,12 @@ const router = createRouter({
     // always scroll to top
     return { top: 0 }
   },
+})
+
+// Error handler para erros de navegação
+router.onError((error) => {
+  console.error('Erro de navegação:', error)
+  router.push({ name: 'Page500' })
 })
 
 export default router

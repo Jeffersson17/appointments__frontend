@@ -31,11 +31,18 @@ import DocsComponents from '@/components/DocsComponents'
 import DocsExample from '@/components/DocsExample'
 import DocsIcons from '@/components/DocsIcons'
 
-import { VueDatePicker } from '@vuepic/vue-datepicker';
+import { VueDatePicker } from '@vuepic/vue-datepicker'
 import '@vuepic/vue-datepicker/dist/main.css'
 
 // Create Vue application instance
 const app = createApp(App)
+
+// Global error handler para capturar erros não tratados
+app.config.errorHandler = (err, instance, info) => {
+    console.error('Erro global da aplicação:', err, info)
+    console.error('Componente:', instance)
+    router.push({ name: 'Page500' }) // Redireciona para página de erro 500
+}
 
 // Install plugins
 app.use(createPinia()) // State management
