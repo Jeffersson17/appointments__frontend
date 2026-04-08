@@ -51,11 +51,6 @@ const routes = [
         component: () => import('@/views/auth/Login'),
       },
       {
-        path: 'register',
-        name: 'Register',
-        component: () => import('@/views/auth/Register'),
-      },
-      {
         path: '404',
         name: 'Page404',
         component: () => import('@/views/auth/Page404'),
