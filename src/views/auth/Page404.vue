@@ -3,20 +3,13 @@
     <CContainer>
       <CRow class="justify-content-center">
         <CCol :md="6">
-          <div class="clearfix">
+          <span class="clearfix">
             <h1 class="float-start display-3 me-4">404</h1>
-            <h4 class="pt-3">Oops! You're lost.</h4>
+            <h4 class="pt-3">Opa! Página não encontrada.</h4>
             <p class="text-body-secondary float-start">
-              The page you are looking for was not found.
+              A página que você está procurando não foi encontrada.
             </p>
-          </div>
-          <CInputGroup class="input-prepend">
-            <CInputGroupText>
-              <CIcon icon="cil-magnifying-glass" />
-            </CInputGroupText>
-            <CFormInput type="text" placeholder="What are you looking for?" />
-            <CButton color="info">Search</CButton>
-          </CInputGroup>
+          </span>
         </CCol>
       </CRow>
     </CContainer>
