@@ -57,12 +57,12 @@ const routes = [
       {
         path: '/appoinments',
         name: 'Appoinments',
-        component: () => import('@/views/theme/Colors.vue'),
+        component: () => import('@/views/appointments/AppointmentPage.vue'),
       },
       {
         path: '/services',
         name: 'Services',
-        component: () => import('@/views/theme/Typography.vue'),
+        component: () => import('@/views/services/ServicePage.vue'),
       },
       {
         path: '/clients',
