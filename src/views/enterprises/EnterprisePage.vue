@@ -1,5 +1,11 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import api from '@/services/api'
+
+onMounted(() => {
+  fetchEnterprises()
+  console.log('Component mounted, fetching enterprises...')
+})
 
 const columns = [
   { key: 'company_name', label: 'Nome da Empresa' },
@@ -8,21 +14,19 @@ const columns = [
   { key: 'actions', label: 'Opções' },
 ]
 
-const allItems = ref([
-  { company_name: 'Empresa A', owner_name: 'João Silva', is_active: true },
-  { company_name: 'Empresa B', owner_name: 'Maria Oliveira', is_active: true },
-  { company_name: 'Empresa C', owner_name: 'Carlos Santos', is_active: false },
-  { company_name: 'Empresa D', owner_name: 'Ana Costa', is_active: false },
-  { company_name: 'Empresa E', owner_name: 'Pedro Lima', is_active: false },
-  { company_name: 'Empresa F', owner_name: 'Lucia Fernandes', is_active: false },
-  { company_name: 'Empresa G', owner_name: 'Rafael Almeida', is_active: false },
-  { company_name: 'Empresa H', owner_name: 'Sofia Pereira', is_active: false },
-  { company_name: 'Empresa I', owner_name: 'Bruno Rodrigues', is_active: false },
-  { company_name: 'Empresa J', owner_name: 'Carla Martins', is_active: false },
-])
+const allItems = ref([])
 
 const currentPage = ref(1)
 const itemsPerPage = ref(5)
+
+async function fetchEnterprises() {
+  try {
+    const response = await api.get('/enterprises')
+    allItems.value = response.data
+  } catch (error) {
+    console.error('Error fetching data:', error)
+  }
+}
 
 const totalPages = computed(() => Math.ceil(allItems.value.length / itemsPerPage.value))
 
@@ -115,12 +119,8 @@ const filteredItems = computed(() => {
                       <CIcon icon="cil-options" />
                     </CDropdownToggle>
                     <CDropdownMenu class="pt-0">
-                      <CDropdownItem>
-                        <CIcon icon="cil-pencil" /> Atualizar
-                      </CDropdownItem>
-                      <CDropdownItem>
-                        <CIcon icon="cil-trash" /> Deletar
-                      </CDropdownItem>
+                      <CDropdownItem> <CIcon icon="cil-pencil" /> Atualizar </CDropdownItem>
+                      <CDropdownItem> <CIcon icon="cil-trash" /> Deletar </CDropdownItem>
                     </CDropdownMenu>
                   </CDropdown>
                 </td>
