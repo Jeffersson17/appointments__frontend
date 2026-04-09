@@ -13,14 +13,14 @@
                   <CInputGroupText>
                     <CIcon icon="cil-envelope-closed" />
                   </CInputGroupText>
-                  <CFormInput placeholder="Email" />
+                  <CFormInput v-model="email" placeholder="Email" />
                 </CInputGroup>
 
                 <CInputGroup class="mb-4">
                   <CInputGroupText>
                     <CIcon icon="cil-lock-locked" />
                   </CInputGroupText>
-                  <CFormInput type="password" placeholder="Senha" />
+                  <CFormInput v-model="password" type="password" placeholder="Senha" />
                 </CInputGroup>
 
                 <CRow>
@@ -41,10 +41,30 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { ref } from 'vue'
+import axios from 'axios'
 
+const email = ref('')
+const password = ref('')
 const router = useRouter()
 
-const login = () => {
-  router.push({ name: 'Dashboard' })
+
+async function login() {
+  try {
+    const response = await axios.post('http://localhost:8000/api/login/', {
+      email: email.value,
+      password: password.value
+    })
+
+    // Armazene o token de autenticação
+    localStorage.setItem('access', response.data.access)
+    localStorage.setItem('refresh', response.data.refresh)
+
+    router.push('/app/dashboard') // Redireciona para a página de dashboard após o login bem-sucedido
+
+    console.log(response.data)
+  } catch (error) {
+    console.error('Erro ao fazer login:', error)
+  }
 }
 </script>
