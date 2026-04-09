@@ -1,8 +1,10 @@
 <script setup>
 import avatar from '../assets/images/avatar.png'
+import { useRouter } from 'vue-router'
 import { ref } from 'vue';
 
 const visibleLiveDemo = ref(false);
+const router = useRouter();
 
 const openModal = () => {
   visibleLiveDemo.value = true;
@@ -19,8 +21,11 @@ const saveChanges = () => {
 }
 
 const logout = () => {
-  // Lógica para realizar o logout do usuário
-  console.log('Realizando logout...');
+  // Lógica para realizar o logout: remover tokens de autenticação.
+  localStorage.removeItem('access');
+  localStorage.removeItem('refresh');
+  
+  router.push('/auth/login'); // Redireciona para a página de login após o logout
 }
 </script>
 

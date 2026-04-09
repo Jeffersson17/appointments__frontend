@@ -23,7 +23,7 @@
  */
 
 import { h, resolveComponent } from 'vue'
-import { createRouter, createWebHashHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
 import DefaultLayout from '@/layouts/DefaultLayout'
 
@@ -34,11 +34,11 @@ import DefaultLayout from '@/layouts/DefaultLayout'
 const routes = [
   {
     path: '/',
-    redirect: '/pages/login',
+    redirect: '/auth/login',
   },
   {
-    path: '/pages',
-    name: 'Pages',
+    path: '/auth',
+    name: 'Auth',
     component: {
       render() {
         return h(resolveComponent('router-view'))
@@ -98,12 +98,12 @@ const routes = [
   // Catch-all para 404
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/pages/404',
+    redirect: '/auth/404',
   },
 ]
 
 const router = createRouter({
-  history: createWebHashHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
   scrollBehavior() {
     // always scroll to top
@@ -111,6 +111,22 @@ const router = createRouter({
   },
 })
 
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('access')
+  const isProtectedRoute = to.path.startsWith('/app')
+  const isLoginRoute = to.path === '/auth/login'
+
+  if (isProtectedRoute && !token) {
+    // Se tentar acessar rota protegida sem token, redireciona para login
+    next({ name: 'Login' })
+  } else if (isLoginRoute && token) {
+    // Se já estiver logado e tentar acessar rota de auth (exceto login), redireciona para dashboard
+    next({ name: 'Dashboard' })
+  } else {
+    // Caso contrário, permite navegação normal
+    next()
+  }
+})
 // Error handler para erros de navegação
 router.onError((error) => {
   console.error('Erro de navegação:', error)
