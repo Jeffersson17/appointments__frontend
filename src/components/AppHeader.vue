@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue'
 import { useColorModes } from '@coreui/vue'
 
-import AppBreadcrumb from '@/components/AppBreadcrumb.vue'
 import AppHeaderDropdownAccnt from '@/components/AppHeaderDropdownAccnt.vue'
 import { useSidebarStore } from '@/stores/sidebar.js'
 
@@ -80,8 +79,6 @@ onMounted(() => {
         <AppHeaderDropdownAccnt />
       </CHeaderNav>
     </CContainer>
-    <CContainer class="px-4" fluid>
-      <AppBreadcrumb />
-    </CContainer>
+
   </CHeader>
 </template>
