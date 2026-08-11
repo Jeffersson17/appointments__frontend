@@ -38,7 +38,7 @@ async function fetchEnterprises() {
       ? response.data
       : (response.data?.results ?? [])
   } catch (error) {
-    console.error('Error fetching enterprises:', error)
+    console.error('Erro ao buscar empresas:', error)
   }
 }
 
@@ -47,7 +47,7 @@ async function deleteEnterprise(id) {
     await EnterpriseService.delete(id)
     fetchEnterprises()
   } catch (error) {
-    console.error('Error deleting enterprise:', error)
+    console.error('Erro ao excluir empresa:', error)
   }
 }
 
@@ -55,13 +55,13 @@ async function toggleEnterpriseActive(item) {
   try {
     const userId = item.user?.id
     if (!userId) {
-      console.error('Enterprise has no linked user')
+      console.error('ID do usuário não encontrado para a empresa:', item)
       return
     }
     await EnterpriseService.setActive(userId, !item.user.is_active)
     await fetchEnterprises()
   } catch (error) {
-    console.error('Error toggling enterprise status:', error)
+    console.error('Erro ao alternar status da empresa:', error)
   }
 }
 
