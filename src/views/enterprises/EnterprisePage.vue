@@ -1,28 +1,226 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { EnterpriseService } from '@/services/enterprise'
+import EnterpriseForm from '@/components/EnterpriseForm.vue'
+import api from '@/services/api'
 
-const columns = [
-  { key: 'company_name', label: 'Nome da Empresa' },
-  { key: 'owner_name', label: 'Proprietário' },
-  { key: 'is_active', label: 'Status' },
-  { key: 'actions', label: 'Opções' },
-]
+onMounted(() => {
+  fetchEnterprises()
+})
 
-const allItems = ref([
-  { company_name: 'Empresa A', owner_name: 'João Silva', is_active: true },
-  { company_name: 'Empresa B', owner_name: 'Maria Oliveira', is_active: true },
-  { company_name: 'Empresa C', owner_name: 'Carlos Santos', is_active: false },
-  { company_name: 'Empresa D', owner_name: 'Ana Costa', is_active: false },
-  { company_name: 'Empresa E', owner_name: 'Pedro Lima', is_active: false },
-  { company_name: 'Empresa F', owner_name: 'Lucia Fernandes', is_active: false },
-  { company_name: 'Empresa G', owner_name: 'Rafael Almeida', is_active: false },
-  { company_name: 'Empresa H', owner_name: 'Sofia Pereira', is_active: false },
-  { company_name: 'Empresa I', owner_name: 'Bruno Rodrigues', is_active: false },
-  { company_name: 'Empresa J', owner_name: 'Carla Martins', is_active: false },
-])
+const allItems = ref([])
+const modalVisible = ref(false)
+const modalMode = ref('create')
+const editingId = ref(null)
+const editingUserId = ref(null)
+const formKey = ref(0)
 
 const currentPage = ref(1)
 const itemsPerPage = ref(5)
+
+const createEmptyForm = () => ({
+  company_name: '',
+  owner_name: '',
+  logo: null,
+  email: '',
+  password: '',
+})
+
+const enterpriseForm = ref(createEmptyForm())
+const enterpriseFormRef = ref(null)
+const saveError = ref('')
+const isSaving = ref(false)
+
+async function fetchEnterprises() {
+  try {
+    const response = await EnterpriseService.getAll()
+    allItems.value = Array.isArray(response.data)
+      ? response.data
+      : (response.data?.results ?? [])
+  } catch (error) {
+    console.error('Erro ao buscar empresas:', error)
+  }
+}
+
+async function deleteEnterprise(id) {
+  try {
+    await EnterpriseService.delete(id)
+    fetchEnterprises()
+  } catch (error) {
+    console.error('Erro ao excluir empresa:', error)
+  }
+}
+
+async function toggleEnterpriseActive(item) {
+  try {
+    const userId = item.user?.id
+    if (!userId) {
+      console.error('ID do usuário não encontrado para a empresa:', item)
+      return
+    }
+    await EnterpriseService.setActive(userId, !item.user.is_active)
+    await fetchEnterprises()
+  } catch (error) {
+    console.error('Erro ao alternar status da empresa:', error)
+  }
+}
+
+function openCreateModal() {
+  modalMode.value = 'create'
+  editingId.value = null
+  editingUserId.value = null
+  saveError.value = ''
+  enterpriseForm.value = createEmptyForm()
+  formKey.value += 1
+  modalVisible.value = true
+}
+
+function openEditModal(item) {
+  modalMode.value = 'edit'
+  editingId.value = item.id
+  editingUserId.value = item.user?.id ?? null
+  saveError.value = ''
+  enterpriseForm.value = {
+    company_name: item.company_name ?? '',
+    owner_name: item.owner_name ?? '',
+    logo: null,
+    email: item.user?.email ?? '',
+    password: '',
+  }
+  formKey.value += 1
+  modalVisible.value = true
+}
+
+function closeModal() {
+  modalVisible.value = false
+  enterpriseForm.value = createEmptyForm()
+  editingId.value = null
+  editingUserId.value = null
+  saveError.value = ''
+}
+
+function isHtmlResponse(value) {
+  return typeof value === 'string' && /^\s*</.test(value)
+}
+
+function getApiErrorMessage(error) {
+  const status = error?.response?.status
+  const data = error?.response?.data
+
+  if (!data || isHtmlResponse(data)) {
+    if (status === 401) return 'Sessão expirada. Faça login novamente.'
+    if (status === 403) return 'Você não tem permissão para esta ação.'
+    if (status === 404) return 'Endpoint não encontrado.'
+    if (status >= 500) return 'Erro interno no servidor. Verifique se o email ou nome da empresa já existem.'
+    return 'Não foi possível salvar a empresa. Tente novamente.'
+  }
+
+  if (typeof data === 'string') return data
+  if (data.detail) return data.detail
+
+  const fieldLabels = {
+    company_name: 'Nome da empresa',
+    owner_name: 'Proprietário',
+    email: 'Email',
+    password: 'Senha',
+    logotipo: 'Logo',
+  }
+
+  const messages = Object.entries(data).flatMap(([field, value]) => {
+    const text = Array.isArray(value) ? value.join(' ') : String(value)
+    const label = fieldLabels[field] || field
+    return `${label}: ${text}`
+  })
+
+  return messages.length
+    ? messages.join(' ')
+    : 'Não foi possível salvar a empresa. Tente novamente.'
+}
+
+async function saveEnterprise() {
+  saveError.value = ''
+
+  const formCmp = enterpriseFormRef.value
+  if (!formCmp) {
+    saveError.value = 'Formulário não carregado. Feche e abra o modal novamente.'
+    return
+  }
+
+  if (!formCmp.validate()) {
+    return
+  }
+
+  isSaving.value = true
+
+  try {
+    const hasLogo = Boolean(enterpriseForm.value.logo)
+    let payload
+
+    if (hasLogo) {
+      payload = new FormData()
+      payload.append('company_name', enterpriseForm.value.company_name)
+      payload.append('owner_name', enterpriseForm.value.owner_name)
+      payload.append('logotipo', enterpriseForm.value.logo)
+
+      if (modalMode.value === 'create') {
+        payload.append('email', enterpriseForm.value.email)
+        payload.append('password', enterpriseForm.value.password)
+      }
+    } else if (modalMode.value === 'create') {
+      payload = {
+        company_name: enterpriseForm.value.company_name,
+        owner_name: enterpriseForm.value.owner_name,
+        email: enterpriseForm.value.email,
+        password: enterpriseForm.value.password,
+      }
+    } else {
+      payload = {
+        company_name: enterpriseForm.value.company_name,
+        owner_name: enterpriseForm.value.owner_name,
+      }
+    }
+
+    if (modalMode.value === 'create') {
+      await EnterpriseService.createEnterprise(payload)
+    } else {
+      await EnterpriseService.update(editingId.value, payload)
+
+      if (editingUserId.value) {
+        const userPayload = {
+          email: enterpriseForm.value.email,
+          name: enterpriseForm.value.owner_name,
+        }
+
+        if (enterpriseForm.value.password) {
+          userPayload.password = enterpriseForm.value.password
+        }
+
+        await EnterpriseService.updateUser(editingUserId.value, userPayload)
+      }
+    }
+
+    await fetchEnterprises()
+    closeModal()
+  } catch (error) {
+    console.error(
+      modalMode.value === 'create'
+        ? 'Error creating enterprise:'
+        : 'Error updating enterprise:',
+      error,
+    )
+    saveError.value = getApiErrorMessage(error)
+  } finally {
+    isSaving.value = false
+  }
+}
+
+const modalTitle = computed(() =>
+  modalMode.value === 'create' ? 'Criar Empresa' : 'Atualizar Empresa',
+)
+
+const saveButtonLabel = computed(() =>
+  modalMode.value === 'create' ? 'Criar' : 'Salvar',
+)
 
 const totalPages = computed(() => Math.ceil(allItems.value.length / itemsPerPage.value))
 
@@ -66,71 +264,175 @@ const filteredItems = computed(() => {
   const query = search.value.toLowerCase()
   return allItems.value.filter(
     (item) =>
-      item.company_name.toLowerCase().includes(query) ||
-      item.owner_name.toLowerCase().includes(query),
+      item.company_name?.toLowerCase().includes(query) ||
+      item.owner_name?.toLowerCase().includes(query),
   )
 })
+
+const getCompanyInitials = (name = '') => {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+}
+
+const getLogoUrl = (logotipo) => {
+  if (!logotipo) return null
+
+  const value = typeof logotipo === 'string' ? logotipo : logotipo?.url
+  if (!value) return null
+  if (/^https?:\/\//i.test(value)) return value
+
+  const base = (api.defaults.baseURL || 'http://localhost:8000/').replace(/\/$/, '')
+  return `${base}/${String(value).replace(/^\//, '')}`
+}
 </script>
+
 <template>
   <CRow>
     <CCol class="mb-4">
-      <CCard>
+      <CCard class="enterprise-card">
         <CCardHeader>
-          <div class="d-flex justify-content-between align-items-center">
-            <!-- Título -->
-            <strong>Empresas</strong>
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <strong class="mb-0">Listagem das Empresas</strong>
 
-            <!-- Busca -->
-            <div class="position-relative" style="max-width: 400px">
-              <CIcon
-                icon="cil-magnifying-glass"
-                class="position-absolute top-50 start-0 translate-middle-y ms-3 text-medium-emphasis"
-              />
-
-              <CFormInput v-model="search" placeholder="Buscar empresa..." class="ps-5" />
+            <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+              <div class="enterprise-search position-relative">
+                <CIcon
+                  icon="cil-magnifying-glass"
+                  class="position-absolute top-50 start-0 translate-middle-y ms-3 text-medium-emphasis"
+                />
+                <CFormInput
+                  v-model="search"
+                  placeholder="Buscar empresa..."
+                  class="ps-5"
+                />
+              </div>
+              <CButton color="primary" class="text-nowrap" @click="openCreateModal">
+                Criar Empresa
+              </CButton>
             </div>
           </div>
         </CCardHeader>
-        <CCardBody>
-          <!-- TABELA -->
-          <table class="table">
-            <thead>
-              <tr>
-                <th v-for="column in columns" :key="column.key">{{ column.label }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="item in paginatedItems" :key="item.company_name">
-                <td>{{ item.company_name }}</td>
-                <td>{{ item.owner_name }}</td>
-                <td>
-                  <span
-                    class="status-square"
-                    :class="item.is_active ? 'status-active' : 'status-inactive'"
-                  ></span>
-                </td>
-                <td>
+
+        <CModal
+          :visible="modalVisible"
+          aria-labelledby="enterpriseModalLabel"
+          @close="closeModal"
+        >
+          <CModalHeader>
+            <CModalTitle id="enterpriseModalLabel">{{ modalTitle }}</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <CAlert v-if="saveError" color="danger" class="mb-3">
+              {{ saveError }}
+            </CAlert>
+            <EnterpriseForm
+              :key="formKey"
+              ref="enterpriseFormRef"
+              v-model="enterpriseForm"
+              :mode="modalMode"
+            />
+          </CModalBody>
+          <CModalFooter>
+            <CButton color="secondary" variant="outline" :disabled="isSaving" @click="closeModal">
+              Fechar
+            </CButton>
+            <CButton color="primary" :disabled="isSaving" @click="saveEnterprise">
+              {{ isSaving ? 'Salvando...' : saveButtonLabel }}
+            </CButton>
+          </CModalFooter>
+        </CModal>
+
+        <CCardBody class="p-0">
+          <CTable align="middle" class="mb-0 enterprise-table" hover responsive>
+            <CTableHead>
+              <CTableRow>
+                <CTableHeaderCell class="bg-body-secondary">Empresa</CTableHeaderCell>
+                <CTableHeaderCell class="bg-body-secondary">Proprietário</CTableHeaderCell>
+                <CTableHeaderCell class="bg-body-secondary text-center">Status</CTableHeaderCell>
+                <CTableHeaderCell class="bg-body-secondary text-end">Opções</CTableHeaderCell>
+              </CTableRow>
+            </CTableHead>
+            <CTableBody>
+              <CTableRow v-if="paginatedItems.length === 0">
+                <CTableDataCell colspan="4" class="text-center py-5">
+                  <div class="text-body-secondary mb-2">
+                    <CIcon icon="cil-magnifying-glass" size="xl" />
+                  </div>
+                  <strong>Nenhuma empresa encontrada</strong>
+                </CTableDataCell>
+              </CTableRow>
+
+              <CTableRow v-for="item in paginatedItems" :key="item.id ?? item.company_name">
+                <CTableDataCell>
+                  <div class="d-flex align-items-center gap-3">
+                    <div
+                      class="enterprise-avatar"
+                      :class="[
+                        item.user?.is_active ? 'is-active' : 'is-inactive',
+                        getLogoUrl(item.logotipo) ? 'has-logo' : '',
+                      ]"
+                    >
+                      <img
+                        v-if="getLogoUrl(item.logotipo)"
+                        :src="getLogoUrl(item.logotipo)"
+                        :alt="item.company_name"
+                      />
+                      <template v-else>
+                        {{ getCompanyInitials(item.company_name) }}
+                      </template>
+                    </div>
+                    <div>
+                      <div class="fw-semibold">{{ item.company_name }}</div>
+                      <div class="small text-body-secondary">
+                        {{ item.user?.email || 'Sem email' }}
+                      </div>
+                    </div>
+                  </div>
+                </CTableDataCell>
+                <CTableDataCell>
+                  <span class="text-body">{{ item.owner_name }}</span>
+                </CTableDataCell>
+                <CTableDataCell class="text-center">
+                  <CBadge
+                    class="enterprise-status-badge"
+                    :color="item.user?.is_active ? 'success' : 'secondary'"
+                  >
+                    {{ item.user?.is_active ? 'Ativa' : 'Desativada' }}
+                  </CBadge>
+                </CTableDataCell>
+                <CTableDataCell class="text-end">
                   <CDropdown placement="bottom-end">
-                    <CDropdownToggle class="py-0 pe-0" :caret="false">
+                    <CDropdownToggle class="enterprise-actions-btn py-0" :caret="false">
                       <CIcon icon="cil-options" />
                     </CDropdownToggle>
-                    <CDropdownMenu class="pt-0">
-                      <CDropdownItem>
-                        <CIcon icon="cil-pencil" /> Atualizar
+                    <CDropdownMenu>
+                      <CDropdownItem @click="openEditModal(item)">
+                        <CIcon icon="cil-pencil" class="me-2" /> Atualizar
                       </CDropdownItem>
-                      <CDropdownItem>
-                        <CIcon icon="cil-trash" /> Deletar
+                      <CDropdownItem @click="toggleEnterpriseActive(item)">
+                        <CIcon
+                          :icon="item.user?.is_active ? 'cil-ban' : 'cil-check-circle'"
+                          class="me-2"
+                        />
+                        {{ item.user?.is_active ? 'Desativar' : 'Ativar' }}
+                      </CDropdownItem>
+                      <CDropdownDivider />
+                      <CDropdownItem class="text-danger" @click="deleteEnterprise(item.id)">
+                        <CIcon icon="cil-trash" class="me-2" /> Deletar
                       </CDropdownItem>
                     </CDropdownMenu>
                   </CDropdown>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <!-- HEADER PAGINAÇÃO -->
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <!-- PAGINAÇÃO -->
-            <CPagination>
+                </CTableDataCell>
+              </CTableRow>
+            </CTableBody>
+          </CTable>
+        </CCardBody>
+
+        <CCardFooter>
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <CPagination class="mb-0">
               <CPaginationItem :disabled="currentPage === 1" @click="changePage(1)">
                 «
               </CPaginationItem>
@@ -149,24 +451,23 @@ const filteredItems = computed(() => {
               </CPaginationItem>
 
               <CPaginationItem
-                :disabled="currentPage === totalPages"
+                :disabled="currentPage === totalPages || totalPages === 0"
                 @click="changePage(currentPage + 1)"
               >
                 ›
               </CPaginationItem>
 
               <CPaginationItem
-                :disabled="currentPage === totalPages"
+                :disabled="currentPage === totalPages || totalPages === 0"
                 @click="changePage(totalPages)"
               >
                 »
               </CPaginationItem>
             </CPagination>
 
-            <!-- SELECT ITEMS -->
-            <div class="d-flex align-items-center gap-2">
-              <span>Items per page:</span>
-              <select class="form-select w-auto" @change="changeItemsPerPage">
+            <div class="d-flex align-items-center gap-2 text-body-secondary">
+              <span class="small text-nowrap">Itens por página</span>
+              <select class="form-select form-select-sm w-auto" @change="changeItemsPerPage">
                 <option :value="5">5</option>
                 <option :value="10">10</option>
                 <option :value="20">20</option>
@@ -174,26 +475,73 @@ const filteredItems = computed(() => {
               </select>
             </div>
           </div>
-        </CCardBody>
+        </CCardFooter>
       </CCard>
     </CCol>
   </CRow>
 </template>
 
 <style scoped>
-.status-square {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
+.enterprise-search {
+  width: min(100%, 260px);
+}
+
+.enterprise-table :deep(th),
+.enterprise-table :deep(td) {
+  padding: 0.9rem 1rem;
   vertical-align: middle;
 }
 
-.status-active {
-  background-color: #28a745;
+.enterprise-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-.status-inactive {
-  background-color: #dc3545;
+.enterprise-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.enterprise-avatar.is-active {
+  background: var(--cui-primary);
+}
+
+.enterprise-avatar.is-inactive {
+  background: var(--cui-secondary-color, #6c757d);
+  opacity: 0.85;
+}
+
+.enterprise-avatar.has-logo {
+  background: transparent;
+  opacity: 1;
+}
+
+.enterprise-status-badge {
+  min-width: 88px;
+  padding: 0.4em 0.7em;
+  font-weight: 600;
+}
+
+.enterprise-actions-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
+

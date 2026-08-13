@@ -111,21 +111,17 @@ const router = createRouter({
   },
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, from) => {
   const token = localStorage.getItem('access')
-  const isProtectedRoute = to.path.startsWith('/app')
-  const isLoginRoute = to.path === '/auth/login'
 
-  if (isProtectedRoute && !token) {
+  if (to.meta.requiresAuth && !token) {
     // Se tentar acessar rota protegida sem token, redireciona para login
-    next({ name: 'Login' })
-  } else if (isLoginRoute && token) {
-    // Se já estiver logado e tentar acessar rota de auth (exceto login), redireciona para dashboard
-    next({ name: 'Dashboard' })
-  } else {
-    // Caso contrário, permite navegação normal
-    next()
+    return { name: 'Login' }
   }
+  if (to.path === '/auth/login' && token) {
+    // Se já estiver logado e tentar acessar rota de auth (exceto login), redireciona para dashboard
+    return { name: 'Dashboard' }
+  } 
 })
 // Error handler para erros de navegação
 router.onError((error) => {
