@@ -137,8 +137,12 @@ async function login() {
       password: password.value
     })
 
+    // Salva os tokens
     localStorage.setItem('access', response.data.access)
     localStorage.setItem('refresh', response.data.refresh)
+
+    // Salva o perfil do usuário
+    localStorage.setItem('role', response.data.user.role)
 
     setTimeout(() => {
       router.push('/app/dashboard')
